@@ -57,7 +57,9 @@ na_count
 #Checking each column:
 
 comb.data$MSSubClass <- as.numeric(comb.data$MSSubClass) #Because 0 NAs
-comb.data$MSZoning <- as.factor(comb.data$MSZoning) #Because NAs only in test data
+comb.data$MSZoning[c(2217, 2905)] = 'RL'
+comb.data$MSZoning[c(1916, 2251)] = 'RM'
+comb.data$MSZoning <- as.factor(comb.data$MSZoning)
 
 comb.data$LotFrontage <- as.character( comb.data$LotFrontage )
 comb.data$HasLotFrontage <- ifelse(is.na(comb.data$LotFrontage), 0, 1) #Created new variable HasLotFrontage
@@ -100,8 +102,10 @@ comb.data$OverallQual <- as.factor(comb.data$OverallQual) #Because 0 NAs
 comb.data$OverallCond <- as.factor(comb.data$OverallCond) #Because 0 NAs
 comb.data$RoofStyle <- as.factor(comb.data$RoofStyle) #Because 0 NAs
 comb.data$RoofMatl <- as.factor(comb.data$RoofMatl) #Because 0 NAs
-comb.data$Exterior1st <- as.factor(comb.data$Exterior1st) #Because only 1 NA
-comb.data$Exterior2nd <- as.factor(comb.data$Exterior2nd) #Because only 1 NA
+comb.data$Exterior1st[is.na(comb.data$Exterior1st)] = 'VinylSd'
+comb.data$Exterior1st <- factor(comb.data$Exterior1st)
+comb.data$Exterior2nd[is.na(comb.data$Exterior2nd)] = 'VinylSd'
+comb.data$Exterior2nd <- factor(comb.data$Exterior2nd)
 
 comb.data$MasVnrType <- ifelse(is.na(comb.data$MasVnrType), "None", comb.data$MasVnrType) #Houses with NA MasVnrType = None
 comb.data$MasVnrType <- as.factor(comb.data$MasVnrType)
@@ -200,6 +204,7 @@ comb.data$CAir[comb.data$CentralAir == "N"] <- 0
 comb.data$CAir <- as.factor(comb.data$CAir)
 comb.data <- comb.data[ , -which(names(comb.data) %in% c("CentralAir"))]
 
+comb.data$Electrical[is.na(comb.data$Electrical)] = 'SBrkr'
 comb.data$Electrical <- as.factor(comb.data$Electrical)
 
 colnames(comb.data)[which(names(comb.data) == "1stFlrSF")] <- "FirstFlrSF"
@@ -211,8 +216,12 @@ comb.data <- comb.data[ , -which(names(comb.data) %in% c("LowQualFinSF"))] #Remo
 
 comb.data$GrLivArea<- as.numeric(comb.data$GrLivArea)
 
+comb.data$BsmtFullBath[is.na(comb.data$BsmtFullBath)] <- 0
 comb.data$BsmtFullBath <- as.numeric(comb.data$BsmtFullBath)
+comb.data$BsmtFullBath <- as.factor(comb.data$BsmtFullBath)
+comb.data$BsmtHalfBath[is.na(comb.data$BsmtHalfBath)] <- 0
 comb.data$BsmtHalfBath <- as.numeric(comb.data$BsmtHalfBath)
+comb.data$BsmtHalfBath <- as.factor(comb.data$BsmtHalfBath)
 
 comb.data$FullBath <- as.numeric(comb.data$FullBath)
 comb.data$HalfBath <- as.numeric(comb.data$HalfBath)
@@ -224,12 +233,12 @@ comb.data$KitchQual[comb.data$KitchenQual == "Ex"] <- 5
 comb.data$KitchQual[comb.data$KitchenQual == "Gd"] <- 4
 comb.data$KitchQual[comb.data$KitchenQual == "TA"] <- 3
 comb.data$KitchQual[comb.data$KitchenQual == "Fa"] <- 2
-comb.data$KitchQual[comb.data$KitchenQual == "Po"] <- 1
-comb.data$KitchQual <- as.factor(comb.data$KitchQual)
+comb.data$KitchQual[comb.data$KitchenQual == "Po" | is.na(comb.data$KitchenQual)] <- 1
 comb.data <- comb.data[ , -which(names(comb.data) %in% c("KitchenQual"))]
 
 comb.data$TotRmsAbvGrd <- as.numeric(comb.data$TotRmsAbvGrd)
 
+comb.data$Functional[is.na(comb.data$Functional)] = 'Typ'
 comb.data$Functional <- as.factor(comb.data$Functional)
 
 comb.data$Fireplaces <- as.numeric(comb.data$Fireplaces)
@@ -312,6 +321,8 @@ comb.data$Fence <- ifelse(is.na(comb.data$Fence), "No Fence", comb.data$Fence) #
 comb.data$Fence <- as.factor(comb.data$Fence)
 
 comb.data <- comb.data[ , -which(names(comb.data) %in% c("MiscFeature","MiscVal"))] #Remove MiscFeature,MiscVal column, no use
+
+comb.data$SaleType[is.na(comb.data$SaleType)] = 'WD'
 comb.data$SaleType <- as.factor(comb.data$SaleType)
 comb.data$SaleCondition <- as.factor(comb.data$SaleCondition)
 comb.data$SalePrice <- as.numeric(comb.data$SalePrice)
@@ -337,7 +348,7 @@ test.fin <- test.fin[ , -which(names(test.fin) %in% c("SalePrice"))]
 #----------------------------------------------------------------------------------------------------------------------------------------------------
 
 #Linear Model
-mod1 <- lm(SalePrice ~., data=train.fin)
+mod1 <- lm(SalePrice ~. , data=train.fin)
 summary(mod1)
 # Predict on test
 pred<- predict(mod1, test.fin, type="response")
@@ -348,7 +359,7 @@ write.csv(mod_op,"LMSubmission.csv", row.names=FALSE)
 #----------------------------------------------------------------------------------------------------------------------------------------------------
 
 #RANDOM FOREST
-model_rf <- randomForest(SalePrice ~ ., data=train.fin,ntree=10000,na.action = na.exclude)
+model_rf <- randomForest(SalePrice ~ ., data=train.fin,na.action = na.exclude)
 summary(model_rf)
 #Finding Important Variables
 varImpPlot(model_rf)
@@ -358,3 +369,4 @@ pred1 <- predict(model_rf, test.fin)
 mod_op1 <- cbind(test.fin$Id, pred1)
 colnames(mod_op1) <- c("Id", "SalePrice")
 write.csv(mod_op1,"RFSubmission.csv", row.names=FALSE)
+
