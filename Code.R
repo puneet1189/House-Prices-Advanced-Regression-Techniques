@@ -1,33 +1,19 @@
 #Loading required packages:
-if (!require("readr")) {
-  suppressWarnings(install.packages("twitteR", repos="http://cran.rstudio.com/"))
-  suppressWarnings(library("readR"))
-}
-if (!require("tidyr")) {
-  suppressWarnings(install.packages("twitteR", repos="http://cran.rstudio.com/"))
-  suppressWarnings(library("tidyr"))
-}
-if (!require("dplyr")) {
-  suppressWarnings(install.packages("twitteR", repos="http://cran.rstudio.com/"))
-  suppressWarnings(library("dplyr"))
+if (!require("tidyverse")) {
+  suppressWarnings(install.packages("tidyverse", repos="http://cran.rstudio.com/"))
+  suppressWarnings(library("tidyverse"))
 }
 if (!require("plyr")) {
-  suppressWarnings(install.packages("twitteR", repos="http://cran.rstudio.com/"))
+  suppressWarnings(install.packages("plyr", repos="http://cran.rstudio.com/"))
   suppressWarnings(library("plyr"))
 }
-if (!require("ggplot2")) {
-  suppressWarnings(install.packages("twitteR", repos="http://cran.rstudio.com/"))
-  suppressWarnings(library("ggplot2"))
-}
 if (!require("caret")) {
-  suppressWarnings(install.packages("twitteR", repos="http://cran.rstudio.com/"))
+  suppressWarnings(install.packages("caret", repos="http://cran.rstudio.com/"))
   suppressWarnings(library("caret"))
 }
 if (!require("randomForest")) {
-  suppressWarnings(install.packages("twitteR", repos="http://cran.rstudio.com/"))
+  suppressWarnings(install.packages("randomForest", repos="http://cran.rstudio.com/"))
   suppressWarnings(library("randomForest"))
-}
-
 #----------------------------------------------------------------------------------------------------------------------------------------------------
 
 #Set working directory:
@@ -56,54 +42,65 @@ na_count
 #We'll use this na_count to handle NAs:
 #Checking each column:
 
-comb.data$MSSubClass <- as.numeric(comb.data$MSSubClass) #Because 0 NAs
-comb.data$MSZoning[c(2217, 2905)] = 'RL'
-comb.data$MSZoning[c(1916, 2251)] = 'RM'
+comb.data$MSSubClass <- as.factor(comb.data$MSSubClass)
+comb.data$MSSubClass<-revalue(comb.data$MSSubClass, c('20'='1 story 1946+', '30'='1 story 1945-', '40'='1 story unf attic', '45'='1,5 story unf', '50'='1,5 story fin', '60'='2 story 1946+', '70'='2 story 1945-', '75'='2,5 story all ages', '80'='split/multi level', '85'='split foyer', '90'='duplex all style/age', '120'='1 story PUD 1946+', '150'='1,5 story PUD all', '160'='2 story PUD 1946+', '180'='PUD multilevel', '190'='2 family conversion'))
+
+which(is.na(comb.data$MSZoning))
+median(comb.data$MSZoning,na.rm = T)
+comb.data$MSZoning[c(2251, 1916, 2217, 2905)] = 'RL'
 comb.data$MSZoning <- as.factor(comb.data$MSZoning)
 
 comb.data$LotFrontage <- as.character( comb.data$LotFrontage )
 comb.data$HasLotFrontage <- ifelse(is.na(comb.data$LotFrontage), 0, 1) #Created new variable HasLotFrontage
 comb.data$HasLotFrontage <- as.factor(comb.data$HasLotFrontage)
-comb.data$LotFrontage <- ifelse(is.na(comb.data$LotFrontage), "0", comb.data$LotFrontage) #Houses with no Lot Frontage = 0
-comb.data$LotFrontage <- as.numeric(comb.data$LotFrontage)
+comb.data$LotFrontage <- NULL
+
 
 comb.data$LotArea <- as.numeric(comb.data$LotArea)
 
 table(comb.data$Street)
-comb.data$StreetType[comb.data$Street == "Pave"] <- 1
-comb.data$StreetType[comb.data$Street != "Pave"] <- 0
-comb.data$StreetType <- as.factor(comb.data$StreetType)
-comb.data <- comb.data[ , -which(names(comb.data) %in% c("Street"))]
+comb.data$Street <- as.character(comb.data$Street)
+comb.data$Street <- as.factor(comb.data$Street)
 
-comb.data$HasAlley <- ifelse(is.na(comb.data$Alley), 0, 1) #Created new variable HasAlley
-comb.data$HasAlley <- as.factor(comb.data$HasAlley)
+table(comb.data$Alley)
 comb.data$Alley <- ifelse(is.na(comb.data$Alley), "No Alley", comb.data$Alley) #Houses with no Alley = No Alley
 comb.data$Alley <- as.factor(comb.data$Alley)
 
+
 table(comb.data$LotShape)
-comb.data$LotType[comb.data$LotShape == "Reg"] <- 1
-comb.data$LotType[comb.data$LotShape != "Reg"] <- 0
+comb.data$LotType[comb.data$LotShape == "Reg"] <- "Regular"
+comb.data$LotType[comb.data$LotShape != "Reg"] <- "Irregular"
 comb.data$LotType <- as.factor(comb.data$LotType)
-comb.data$LotShape <- as.factor(comb.data$LotShape)
-comb.data <- comb.data[ , -which(names(comb.data) %in% c("LotShape"))]
+comb.data$LotShape <- NULL
 
 comb.data$LandContour <- as.factor(comb.data$LandContour)
 
-comb.data <- comb.data[ , -which(names(comb.data) %in% c("Utilities"))]
+which(is.na(comb.data$Utilities))
+table(comb.data$Utilities)
+median(comb.data$Utilities,na.rm = T)
+comb.data$Utilities[c(1916,1946)] = 'AllPub'
+comb.data$Utilities <- factor(comb.data$Utilities)
 
-comb.data$LotConfig <- as.factor(comb.data$LotConfig) #Because 0 NAs
-comb.data$LandSlope <- as.factor(comb.data$LandSlope) #Because 0 NAs
-comb.data$Neighborhood <- as.factor(comb.data$Neighborhood) #Because 0 NAs
-comb.data$Condition1 <- as.factor(comb.data$Condition1) #Because 0 NAs
-comb.data$Condition2 <- as.factor(comb.data$Condition2) #Because 0 NAs
-comb.data$BldgType <- as.factor(comb.data$BldgType) #Because 0 NAs
-comb.data$HouseStyle <- as.factor(comb.data$HouseStyle) #Because 0 NAs
-comb.data$OverallQual <- as.factor(comb.data$OverallQual) #Because 0 NAs
-comb.data$OverallCond <- as.factor(comb.data$OverallCond) #Because 0 NAs
-comb.data$RoofStyle <- as.factor(comb.data$RoofStyle) #Because 0 NAs
-comb.data$RoofMatl <- as.factor(comb.data$RoofMatl) #Because 0 NAs
+comb.data$LotConfig <- as.factor(comb.data$LotConfig)
+comb.data$LandSlope <- as.factor(comb.data$LandSlope)
+comb.data$Neighborhood <- as.factor(comb.data$Neighborhood)
+comb.data$Condition1 <- as.factor(comb.data$Condition1)
+comb.data$Condition2 <- as.factor(comb.data$Condition2)
+comb.data$BldgType <- as.factor(comb.data$BldgType)
+comb.data$HouseStyle <- as.factor(comb.data$HouseStyle)
+comb.data$OverallQual <- as.factor(comb.data$OverallQual)
+comb.data$OverallCond <- as.factor(comb.data$OverallCond)
+
+str(comb.data$YearBuilt)
+str(comb.data$YearRemodAdd)
+
+comb.data$RoofStyle <- as.factor(comb.data$RoofStyle)
+comb.data$RoofMatl <- as.factor(comb.data$RoofMatl)
+
+table(comb.data$Exterior1st)
 comb.data$Exterior1st[is.na(comb.data$Exterior1st)] = 'VinylSd'
 comb.data$Exterior1st <- factor(comb.data$Exterior1st)
+table(comb.data$Exterior2nd)
 comb.data$Exterior2nd[is.na(comb.data$Exterior2nd)] = 'VinylSd'
 comb.data$Exterior2nd <- factor(comb.data$Exterior2nd)
 
@@ -113,22 +110,8 @@ comb.data$MasVnrType <- as.factor(comb.data$MasVnrType)
 comb.data$MasVnrArea <- as.numeric(comb.data$MasVnrArea)
 comb.data$MasVnrArea <- ifelse(is.na(comb.data$MasVnrArea), 0, comb.data$MasVnrArea) #Houses with NA MasVnrArea = 0
 
-comb.data$ExterQuality[comb.data$ExterQual == "Ex"] <- 5
-comb.data$ExterQuality[comb.data$ExterQual == "Gd"] <- 4
-comb.data$ExterQuality[comb.data$ExterQual == "TA"] <- 3
-comb.data$ExterQuality[comb.data$ExterQual == "Fa"] <- 2
-comb.data$ExterQuality[comb.data$ExterQual == "Po"] <- 1
-comb.data$ExterQuality <- as.factor(comb.data$ExterQuality)
-comb.data <- comb.data[ , -which(names(comb.data) %in% c("ExterQual"))]
-
-comb.data$ExterCondn[comb.data$ExterCond == "Ex"] <- 5
-comb.data$ExterCondn[comb.data$ExterCond == "Gd"] <- 4
-comb.data$ExterCondn[comb.data$ExterCond == "TA"] <- 3
-comb.data$ExterCondn[comb.data$ExterCond == "Fa"] <- 2
-comb.data$ExterCondn[comb.data$ExterCond == "Po"] <- 1
-comb.data$ExterCondn <- as.factor(comb.data$ExterCondn)
-comb.data <- comb.data[ , -which(names(comb.data) %in% c("ExterCond"))]
-
+comb.data$ExterQual <- as.factor(comb.data$ExterQual)
+comb.data$ExterCond <- as.factor(comb.data$ExterCond)
 comb.data$Foundation <- as.factor(comb.data$Foundation)
 
 comb.data$HasBsmt <- ifelse(is.na(comb.data$BsmtQual), 0, 1) #Created new variable HasBsmt
@@ -142,37 +125,21 @@ comb.data$BsmtHt <- as.factor(comb.data$BsmtHt)
 comb.data <- comb.data[ , -which(names(comb.data) %in% c("BsmtQual"))] #Remove BsmtQual column
 
 comb.data$BsmtCond <- ifelse(is.na(comb.data$BsmtCond), "No Bsmt", comb.data$BsmtCond) #Houses with no Basement = No Bsmt
-comb.data$BsmtCondn[comb.data$BsmtCond == "Ex"] <- 5
-comb.data$BsmtCondn[comb.data$BsmtCond == "Gd"] <- 4
-comb.data$BsmtCondn[comb.data$BsmtCond == "TA"] <- 3
-comb.data$BsmtCondn[comb.data$BsmtCond == "Fa"] <- 2
-comb.data$BsmtCondn[comb.data$BsmtCond == "Po"] <- 1
-comb.data$BsmtCondn[comb.data$BsmtCond == "No Bsmt"] <- 0
-comb.data$BsmtCondn <- as.factor(comb.data$BsmtCondn)
-comb.data <- comb.data[ , -which(names(comb.data) %in% c("BsmtCond"))]
+comb.data$BsmtCond <- as.factor(comb.data$BsmtCond)
 
 comb.data$BsmtExposure <- ifelse(is.na(comb.data$BsmtExposure), "No Bsmt", comb.data$BsmtExposure) #Houses with no Basement = No Bsmt
-comb.data$BsmtExpos[comb.data$BsmtExposure == "Gd"] <- 4
-comb.data$BsmtExpos[comb.data$BsmtExposure == "Av"] <- 3
-comb.data$BsmtExpos[comb.data$BsmtExposure == "Mn"] <- 2
-comb.data$BsmtExpos[comb.data$BsmtExposure == "No"] <- 1
-comb.data$BsmtExpos[comb.data$BsmtExposure == "No Bsmt"] <- 0
-comb.data$BsmtExpos <- as.factor(comb.data$BsmtExpos)
-comb.data <- comb.data[ , -which(names(comb.data) %in% c("BsmtExposure"))]
-
+comb.data$BsmtExposure <- as.factor(comb.data$BsmtExposure)
 
 comb.data$BsmtFinType1 <- ifelse(is.na(comb.data$BsmtFinType1), "No Bsmt", comb.data$BsmtFinType1) #Houses with no Basement = No Bsmt
-comb.data$BsmtFinTyp1[comb.data$BsmtFinType1 == "GLQ"] <- 6
-comb.data$BsmtFinTyp1[comb.data$BsmtFinType1 == "ALQ"] <- 5
-comb.data$BsmtFinTyp1[comb.data$BsmtFinType1 == "BLQ"] <- 4
-comb.data$BsmtFinTyp1[comb.data$BsmtFinType1 == "Rec"] <- 3
-comb.data$BsmtFinTyp1[comb.data$BsmtFinType1 == "LwQ"] <- 2
-comb.data$BsmtFinTyp1[comb.data$BsmtFinType1 == "Unf"] <- 1
-comb.data$BsmtFinTyp1[comb.data$BsmtFinType1 == "No Bsmt"] <- 0
-comb.data$BsmtFinTyp1 <- as.factor(comb.data$BsmtFinTyp1)
-comb.data <- comb.data[ , -which(names(comb.data) %in% c("BsmtFinType1"))]
+comb.data$BsmtFinType1 <- as.factor(comb.data$BsmtFinType1)
 
 comb.data <- comb.data[ , -which(names(comb.data) %in% c("BsmtFinSF1"))] #Remove BsmtFinSF1 column, only 0 and NA values
+
+na_count <-sapply(comb.data, function(comb.data) sum(length(which(is.na(comb.data)))))
+na_count <- data.frame(na_count)
+na_count
+
+
 
 comb.data$BsmtFinType2 <- ifelse(is.na(comb.data$BsmtFinType2), "No Bsmt", comb.data$BsmtFinType2) #Houses with no Basement = No Bsmt
 comb.data$BsmtFinTyp2[comb.data$BsmtFinType2 == "GLQ"] <- 6
@@ -348,25 +315,130 @@ test.fin <- test.fin[ , -which(names(test.fin) %in% c("SalePrice"))]
 #----------------------------------------------------------------------------------------------------------------------------------------------------
 
 #Linear Model
-mod1 <- lm(SalePrice ~. , data=train.fin)
+mod1 <- lm(log(SalePrice) ~. , data=train.fin[,!colnames(train.fin) %in% c("MSSubClass")])
 summary(mod1)
 # Predict on test
 pred<- predict(mod1, test.fin, type="response")
+pred <- exp(pred)
 mod_op <- cbind(test.fin$Id, pred)
 colnames(mod_op) <- c("Id", "SalePrice")
 write.csv(mod_op,"LMSubmission.csv", row.names=FALSE)
 
 #----------------------------------------------------------------------------------------------------------------------------------------------------
 
-#RANDOM FOREST
-model_rf <- randomForest(SalePrice ~ ., data=train.fin,na.action = na.exclude)
+#RANDOM FOREST (2nd Best till now)
+model_rf <- randomForest(log(SalePrice) ~ ., data=train.fin,na.action = na.exclude)
 summary(model_rf)
 #Finding Important Variables
 varImpPlot(model_rf)
 model_rf
 
 pred1 <- predict(model_rf, test.fin)
+pred1 <- exp(pred1)
 mod_op1 <- cbind(test.fin$Id, pred1)
 colnames(mod_op1) <- c("Id", "SalePrice")
 write.csv(mod_op1,"RFSubmission.csv", row.names=FALSE)
+
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------
+
+#SVM:
+
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+set.seed(12345)
+mod_svm <- train(log(SalePrice) ~., data = train.fin, method = "svmLinear",trControl=trctrl,preProcess = c("center", "scale"),tuneLength = 10)
+summary(mod_svm)
+mod_svm
+
+pred_svm <- predict(mod_svm, test.fin)
+pred_svm <- exp(pred_svm)
+op_svm <- cbind(test.fin$Id, pred_svm)
+colnames(op_svm) <- c("Id", "SalePrice")
+write.csv(op_svm,"SVMSubmission.csv", row.names=FALSE)
+
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------
+
+#KNN:
+
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+set.seed(9899)
+mod_knn <- train(log(SalePrice) ~., data = train.fin, method = "knn",trControl=trctrl,preProcess = c("center", "scale"),tuneLength = 10)
+summary(mod_knn)
+mod_knn
+
+pred_knn <- predict(mod_knn, test.fin)
+pred_knn <- exp(pred_knn)
+op_knn <- cbind(test.fin$Id, pred_knn)
+colnames(op_knn) <- c("Id", "SalePrice")
+write.csv(op_knn,"KNNSubmission.csv", row.names=FALSE)
+
+
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------
+
+#RF2:
+
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+set.seed(765)
+mod_rf <- train(log(SalePrice) ~., data = train.fin, method = "rf",trControl=trctrl,preProcess = c("center", "scale"),tuneLength = 10)
+summary(mod_rf)
+mod_rf
+
+pred_rf <- predict(mod_rf, test.fin)
+pred_rf <- exp(pred_rf)
+op_rf <- cbind(test.fin$Id, pred_rf)
+colnames(op_rf) <- c("Id", "SalePrice")
+write.csv(op_rf,"RF2Submission.csv", row.names=FALSE)
+
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------
+
+#XGBLinear Gradient Boosting: (Takes hell of a time)
+
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+set.seed(348)
+mod_xg <- train(log(SalePrice) ~., data = train.fin, method = "xgbLinear",trControl=trctrl,preProcess = c("center", "scale"),tuneLength = 10)
+summary(mod_xg)
+mod_xg
+
+pred_xg <- predict(mod_xg, test.fin)
+pred_xg <- exp(pred_xg)
+op_xg <- cbind(test.fin$Id, pred_xg)
+colnames(op_xg) <- c("Id", "SalePrice")
+write.csv(op_xg,"XGBLinearSubmission.csv", row.names=FALSE)
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+#GBM Gradient Boosting: (Best till now)
+
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+set.seed(1189)
+mod_gbm <- train(log(SalePrice) ~., data = train.fin, method = "gbm",trControl=trctrl,preProcess = c("center", "scale"),tuneLength = 10)
+summary(mod_gbm)
+mod_gbm
+
+pred_gbm <- predict(mod_gbm, test.fin)
+pred_gbm <- exp(pred_gbm)
+op_gbm <- cbind(test.fin$Id, pred_gbm)
+colnames(op_gbm) <- c("Id", "SalePrice")
+write.csv(op_gbm,"GBMSubmission.csv", row.names=FALSE)
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------
+
+#CatBoost:
+
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+set.seed(3199)
+mod_cb <- train(log(SalePrice) ~., data = train.fin, method = catboost.caret,trControl=trctrl,preProcess = c("center", "scale"),tuneLength = 10)
+summary(mod_cb)
+mod_cb
+
+pred_cb <- predict(mod_cb, test.fin)
+pred_cb <- exp(pred_cb)
+op_cb <- cbind(test.fin$Id, pred_cb)
+colnames(op_cb) <- c("Id", "SalePrice")
+write.csv(op_cb,"CatBoostSubmission.csv", row.names=FALSE)
+
 
