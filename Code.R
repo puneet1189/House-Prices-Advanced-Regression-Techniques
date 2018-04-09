@@ -1,19 +1,10 @@
 #Loading required packages:
-if (!require("tidyverse")) {
-  suppressWarnings(install.packages("tidyverse", repos="http://cran.rstudio.com/"))
-  suppressWarnings(library("tidyverse"))
-}
-if (!require("plyr")) {
-  suppressWarnings(install.packages("plyr", repos="http://cran.rstudio.com/"))
-  suppressWarnings(library("plyr"))
-}
-if (!require("caret")) {
-  suppressWarnings(install.packages("caret", repos="http://cran.rstudio.com/"))
-  suppressWarnings(library("caret"))
-}
-if (!require("randomForest")) {
-  suppressWarnings(install.packages("randomForest", repos="http://cran.rstudio.com/"))
-  suppressWarnings(library("randomForest"))
+require(tidyverse)
+require(plyr)
+require(dplyr)
+require(caret)
+require(randomForest)
+
 #----------------------------------------------------------------------------------------------------------------------------------------------------
 
 #Set working directory:
@@ -306,11 +297,87 @@ write.csv(comb.data, "comb.data.csv")
 
 #----------------------------------------------------------------------------------------------------------------------------------------------------
 
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------
+
 #Split back to train and test:
 
 train.fin <-comb.data[1:1460,]
 test.fin <-comb.data[(1461):nrow(comb.data),]
 test.fin <- test.fin[ , -which(names(test.fin) %in% c("SalePrice"))]
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------
+
+df <- train.fin
+
+#Most houses go for around $120000 - $200000
+ggplot(df, aes(x=SalePrice)) +
+  geom_histogram(fill="steelblue", binwidth = 10000) +
+  scale_x_continuous(breaks= seq(0, 800000, by=100000), labels = scales::dollar)
+
+
+#Total Sale Price increases as Overall Quality Increases.
+ggplot(df, aes(x=OverallQual,y=SalePrice)) +
+  geom_boxplot() +
+  xlab("Overall Quality") + 
+  ylab("Total Sale Price") +
+  scale_y_continuous(labels = scales::dollar)
+
+#Newly built houses are sold more than old houses.
+ggplot(df, aes(x=YearBuilt, y=SalePrice)) + 
+  geom_point() +
+  geom_smooth() +
+  ggtitle("Sale Price wrt Year Built") + 
+  xlab("Year Built") + 
+  ylab("Sale Price") +
+  scale_y_continuous(labels = scales::dollar)
+
+
+#MSZoning: Identifies the general zoning classification of the sale:
+#We can see that Residential Areas with a low density have made most in sales. Makes sense!
+ggplot(df, aes(x=MSZoning, y=SalePrice)) + 
+  geom_bar(stat='identity',fill="steelblue") +
+  ggtitle("CHECKING PRICE OF HOUSES WITH RESPECT TO ZONES:") + 
+  xlab("MSZoning") + 
+  ylab("Sale Price")+ 
+  scale_y_continuous(labels = scales::dollar)
+
+
+#LandSlope: Slope of property
+#Houses with a gentle slope have made most in sales. Ofcourse, no one wants to buy property with a moderate or steep slope.
+table(df$LandSlope)
+ggplot(df, aes(x=LandSlope, y=SalePrice)) + 
+  geom_bar(stat='identity',fill="steelblue") +
+  ggtitle("CHECKING PRICE OF HOUSES WITH RESPECT TO SLOPE:") + 
+  xlab("Slope") + 
+  ylab("Sale Price")
+
+#Sale Condition:
+#Obviously, Properties with normal condition have made more in sales.
+ggplot(df, aes(x=SaleCondition, y=SalePrice)) + 
+  geom_bar(stat='identity',fill="steelblue") +
+  scale_y_continuous(labels = scales::dollar)
+
+#Neighborhood: Physical locations within Ames city limits
+#And Greater Living Area:
+
+ggplot(df, aes(x=Neighborhood, y=SalePrice)) + 
+  geom_bar(stat='summary',fill="steelblue",fun.y="median") +
+  ggtitle("CHECKING PRICE OF HOUSES WITH RESPECT TO NEIGHBORHOOD:") + 
+  xlab("Neighborhood") + 
+  ylab("Median Sale Price") + 
+  theme(axis.text.x = element_text(angle=45)) +
+  scale_y_continuous(labels = scales::dollar)
+
+ggplot(df, aes(x=Neighborhood)) + 
+  geom_histogram(stat='count',fill="steelblue") +
+  ggtitle("Count of Houses sold wrt Neighborhood") + 
+  theme(axis.text.x = element_text(angle=45))
+
+ggplot(df, aes(x=SalePrice, y=GrLivArea, color=Neighborhood)) +
+  geom_point(shape=16, alpha=.8, size=2) +
+  scale_x_continuous(label=scales::dollar)
+#We can see that one property with a very high living area (Edwards) has a low sale price. We can conclude the reason is a poor neighborhood.
 
 #----------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -326,7 +393,7 @@ write.csv(mod_op,"LMSubmission.csv", row.names=FALSE)
 
 #----------------------------------------------------------------------------------------------------------------------------------------------------
 
-#RANDOM FOREST (2nd Best till now)
+#RANDOM FOREST 
 model_rf <- randomForest(log(SalePrice) ~ ., data=train.fin,na.action = na.exclude)
 summary(model_rf)
 #Finding Important Variables
@@ -411,7 +478,7 @@ write.csv(op_xg,"XGBLinearSubmission.csv", row.names=FALSE)
 #----------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-#GBM Gradient Boosting: (Best till now)
+#GBM Gradient Boosting:
 
 trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
 set.seed(1189)
@@ -441,4 +508,24 @@ op_cb <- cbind(test.fin$Id, pred_cb)
 colnames(op_cb) <- c("Id", "SalePrice")
 write.csv(op_cb,"CatBoostSubmission.csv", row.names=FALSE)
 
+#----------------------------------------------------------------------------------------------------------------------------------------------------
+
+library(e1071) #Best!
+svm_model<-svm(SalePrice~.,data=train.fin,cost = 3)
+svm_pred <- predict(svm_model,newdata = test.fin)
+solution <- data.frame(Id=test.fin$Id,SalePrice=svm_pred)
+write.csv(solution,"svm_solution.csv",row.names = F)
+
+
+#----------------------------------------------------------------------------------------------------------------------------------------------------
+#GBM New:
+CARET.TRAIN.CTRL <- trainControl(method = "repeatedcv", number = 5, repeats = 5, verboseIter = FALSE, allowParallel = TRUE)
+gbmFit <- train(SalePrice ~ ., method = "gbm",
+                trControl = CARET.TRAIN.CTRL, 
+                data = train.fin, verbose = FALSE)
+
+preds1 <- predict(gbmFit, newdata = test.fin)
+op_gbm1 <- cbind(test.fin$Id, preds1)
+colnames(op_gbm1) <- c("Id", "SalePrice")
+write.csv(op_gbm1,"GBMSubmissionNew.csv", row.names=FALSE)
 
